@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #08111F;
+    color: #e0e3e5;
+    font-family: 'Manrope', sans-serif;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(132,207,255,0.2); border-radius: 3px; }
+}
+
+@layer components {
+  .glass-panel {
+    background-color: rgba(16, 35, 61, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(132, 207, 255, 0.2);
+  }
+  .glass-chip {
+    background-color: rgba(174, 198, 255, 0.15);
+    color: #aec6ff;
+    border: 1px solid rgba(174, 198, 255, 0.3);
+  }
+  .text-glow {
+    text-shadow: 0 0 10px rgba(174, 198, 255, 0.5);
+  }
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-2 rounded-md text-slate-500 
+           hover:text-slate-200 hover:bg-white/5 transition-all duration-200 
+           font-grotesk text-sm border-l-4 border-transparent;
+  }
+  .nav-link-active {
+    @apply flex items-center gap-3 px-4 py-2 rounded-md 
+           bg-gradient-to-r from-electric/20 to-transparent text-electric 
+           border-l-4 border-electric font-grotesk text-sm;
+  }
+  .metric-card {
+    @apply glass-panel rounded-lg p-4 flex flex-col justify-between h-24 
+           hover:border-electric/40 transition-all duration-300;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-b from-electric to-[#005ac4] text-white py-2.5 px-6 
+           rounded-lg font-grotesk text-sm font-semibold hover:opacity-90 
+           transition-all duration-200 active:scale-95 disabled:opacity-40 
+           disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply border border-primary/30 text-primary bg-transparent py-2 px-4 
+           rounded-lg font-grotesk text-sm hover:bg-primary/10 
+           transition-all duration-200 active:scale-95;
+  }
+  .input-field {
+    @apply bg-navy border border-outline-variant/50 rounded-lg px-3 py-2 
+           text-on-surface font-grotesk text-sm focus:border-cyan-soft 
+           focus:ring-1 focus:ring-cyan-soft/30 focus:outline-none 
+           transition-all duration-200;
+  }
+}

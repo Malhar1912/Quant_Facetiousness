@@ -1,0 +1,10 @@
+fastapi==0.115.0
+uvicorn==0.30.0
+python-dotenv==1.0.1
+psycopg2-binary==2.9.9
+numpy
+pandas
+yfinance
+hmmlearn
+xgboost
+scikit-learn

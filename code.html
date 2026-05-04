@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Aether-1 Engine Trading Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#d0e4fe",
+                        "surface-container-high": "#262b2c",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#071d30",
+                        "outline-variant": "#414754",
+                        "on-background": "#e0e3e5",
+                        "on-secondary-fixed-variant": "#004c6c",
+                        "on-tertiary-container": "#172b3f",
+                        "on-primary-container": "#00275e",
+                        "on-secondary": "#00344c",
+                        "inverse-primary": "#005ac4",
+                        "surface-tint": "#aec6ff",
+                        "secondary-fixed-dim": "#84cfff",
+                        "on-primary-fixed-variant": "#004396",
+                        "surface": "#101416",
+                        "surface-bright": "#363a3c",
+                        "secondary": "#84cfff",
+                        "inverse-on-surface": "#2d3133",
+                        "tertiary-fixed-dim": "#b4c8e2",
+                        "tertiary-container": "#7f93aa",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#c7e7ff",
+                        "on-primary-fixed": "#001a42",
+                        "primary-container": "#4f8eff",
+                        "surface-dim": "#101416",
+                        "secondary-container": "#1c9ad4",
+                        "primary-fixed-dim": "#aec6ff",
+                        "tertiary": "#b4c8e2",
+                        "on-primary": "#002e6b",
+                        "surface-container-highest": "#313537",
+                        "surface-container-low": "#181c1e",
+                        "background": "#101416",
+                        "on-secondary-fixed": "#001e2e",
+                        "outline": "#8c90a0",
+                        "primary-fixed": "#d8e2ff",
+                        "primary": "#aec6ff",
+                        "on-surface": "#e0e3e5",
+                        "on-tertiary": "#1e3246",
+                        "error-container": "#93000a",
+                        "inverse-surface": "#e0e3e5",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-lowest": "#0b0f10",
+                        "on-secondary-container": "#002d42",
+                        "surface-container": "#1c2022",
+                        "on-surface-variant": "#c2c6d7",
+                        "surface-variant": "#313537",
+                        "on-tertiary-fixed-variant": "#35485d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "lg": "40px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "margin": "32px",
+                        "xs": "8px",
+                        "xl": "64px",
+                        "gutter": "20px"
+                    },
+                    "fontFamily": {
+                        "data-mono": ["Space Grotesk", "monospace"],
+                        "label-sm": ["Manrope", "sans-serif"],
+                        "headline-md": ["Space Grotesk", "sans-serif"],
+                        "body-lg": ["Manrope", "sans-serif"],
+                        "display-lg": ["Space Grotesk", "sans-serif"],
+                        "body-md": ["Manrope", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "data-mono": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #08111F;
+            color: #e0e3e5;
+        }
+        .glass-panel {
+            background-color: rgba(16, 35, 61, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(132, 207, 255, 0.2);
+        }
+        .glass-chip {
+            background-color: rgba(174, 198, 255, 0.15);
+            color: #aec6ff;
+            border: 1px solid rgba(174, 198, 255, 0.3);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(174, 198, 255, 0.5);
+        }
+        .ai-pulse {
+            animation: pulse-glow 3s infinite;
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(47, 128, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(47, 128, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(47, 128, 255, 0); }
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col md:flex-row overflow-x-hidden">
+<!-- TopAppBar (Web & Mobile) -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#10233D]/60 backdrop-blur-xl border-b border-white/10 shadow-[0_0_20px_rgba(47,128,255,0.1)]">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold bg-gradient-to-r from-[#2F80FF] to-[#00FFFF] bg-clip-text text-transparent font-['Space_Grotesk'] tracking-tight">Aether-1 Engine</span>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-400 hover:text-white transition-colors hover:bg-white/5 transition-all duration-300 font-['Space_Grotesk'] tracking-tight cursor-pointer active:scale-95 px-3 py-1 rounded-md" href="#">Terminal</a>
+<a class="text-[#2F80FF] border-b-2 border-[#2F80FF] pb-2 font-['Space_Grotesk'] tracking-tight cursor-pointer active:scale-95 px-3" href="#">Portfolio</a>
+<a class="text-slate-400 hover:text-white transition-colors hover:bg-white/5 transition-all duration-300 font-['Space_Grotesk'] tracking-tight cursor-pointer active:scale-95 px-3 py-1 rounded-md" href="#">Strategies</a>
+<a class="text-slate-400 hover:text-white transition-colors hover:bg-white/5 transition-all duration-300 font-['Space_Grotesk'] tracking-tight cursor-pointer active:scale-95 px-3 py-1 rounded-md" href="#">Intelligence</a>
+<a class="text-slate-400 hover:text-white transition-colors hover:bg-white/5 transition-all duration-300 font-['Space_Grotesk'] tracking-tight cursor-pointer active:scale-95 px-3 py-1 rounded-md" href="#">Risk</a>
+</nav>
+<div class="flex items-center gap-4">
+<span class="text-sm font-data-mono text-secondary-fixed">LIVE: 98.4% Confidence</span>
+<div class="flex gap-2 text-on-surface">
+<span class="material-symbols-outlined cursor-pointer hover:text-white transition-colors">notifications_active</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-white transition-colors">settings</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-white transition-colors">account_circle</span>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Web Only) -->
+<aside class="hidden md:flex flex-col h-screen w-64 left-0 top-0 fixed bg-[#08111F] border-r border-white/10 divide-y divide-white/5 z-40 pt-16">
+<div class="p-6 flex flex-col gap-2 border-b border-white/5">
+<h2 class="text-lg font-black text-white font-['Space_Grotesk']">System Core</h2>
+<p class="text-xs text-slate-400 font-['Space_Grotesk']">Autonomous v4.2</p>
+</div>
+<nav class="flex-1 overflow-y-auto py-4 flex flex-col gap-1 px-3">
+<a class="flex items-center gap-3 px-4 py-2 rounded-md bg-gradient-to-r from-[#2F80FF]/20 to-transparent text-[#2F80FF] border-l-4 border-[#2F80FF] transition-all duration-200 ease-in-out font-['Space_Grotesk'] text-sm" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-md text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all duration-200 ease-in-out font-['Space_Grotesk'] text-sm border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined text-lg">query_stats</span>
+                Live Feed
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-md text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all duration-200 ease-in-out font-['Space_Grotesk'] text-sm border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined text-lg">security</span>
+                Risk Metrics
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-md text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all duration-200 ease-in-out font-['Space_Grotesk'] text-sm border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined text-lg">history</span>
+                Backtests
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-md text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all duration-200 ease-in-out font-['Space_Grotesk'] text-sm border-l-4 border-transparent" href="#">
+<span class="material-symbols-outlined text-lg">manage_accounts</span>
+                Admin
+            </a>
+</nav>
+<div class="p-4 border-t border-white/5">
+<button class="w-full bg-gradient-to-b from-[#2F80FF] to-[#005ac4] text-white py-2 rounded font-['Space_Grotesk'] text-sm hover:opacity-90 transition-opacity">Deploy Capital</button>
+</div>
+<div class="p-4 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-1 text-slate-500 hover:text-slate-200 font-['Space_Grotesk'] text-xs" href="#">
+<span class="material-symbols-outlined text-sm">sensors</span> System Status
+            </a>
+<a class="flex items-center gap-3 px-4 py-1 text-slate-500 hover:text-slate-200 font-['Space_Grotesk'] text-xs" href="#">
+<span class="material-symbols-outlined text-sm">menu_book</span> Documentation
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 pt-16 p-6 lg:p-margin bg-[#08111F] text-on-surface">
+<!-- Hero Section -->
+<div class="mb-md flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-white/10 pb-4">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<h1 class="font-display-lg text-display-lg text-white">Aether-1 Engine</h1>
+<span class="glass-chip px-2 py-1 rounded text-xs font-label-sm uppercase tracking-wider flex items-center gap-1 ai-pulse">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed"></span> LIVE 24/7
+                    </span>
+</div>
+<p class="font-body-lg text-body-lg text-outline">Multi-Regime Mean Reversion</p>
+</div>
+<div class="glass-panel p-3 rounded-lg flex items-center gap-4">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-widest">Market Mode</span>
+<span class="font-data-mono text-data-mono text-secondary-fixed text-glow">SCANNING</span>
+</div>
+<div class="h-8 w-px bg-white/10"></div>
+<div class="flex flex-col max-w-xs">
+<span class="font-body-md text-body-md text-outline truncate">Monitoring momentum divergence... Signal confidence rising... Trade execution engine active.</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left/Center Column (8 cols) -->
+<div class="lg:col-span-8 flex flex-col gap-gutter">
+<!-- Live Portfolio Value Card -->
+<div class="glass-panel rounded-xl p-md relative overflow-hidden">
+<!-- Subtle background glow/chart abstraction -->
+<div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none"></div>
+<div class="absolute bottom-0 left-0 w-full h-1/2 opacity-20 pointer-events-none" style="background: linear-gradient(to top, rgba(132, 207, 255, 0.1), transparent);">
+<!-- Abstract wavy line representing chart -->
+<svg class="w-full h-full stroke-secondary-fixed fill-none" preserveaspectratio="none" stroke-width="0.5" viewbox="0 0 100 20">
+<path d="M0 20 Q 25 5, 50 15 T 100 5"></path>
+</svg>
+</div>
+<div class="relative z-10">
+<h2 class="font-label-sm text-label-sm text-outline uppercase tracking-wider mb-2">Live Portfolio Value</h2>
+<div class="font-display-lg text-[64px] font-semibold text-white mb-4 tracking-tighter">
+                            $12,482,901.45
+                        </div>
+<div class="flex gap-4">
+<div class="bg-secondary-fixed/5 border border-secondary-fixed/20 rounded px-3 py-2 flex flex-col">
+<span class="font-label-sm text-label-sm text-outline">Today's P&amp;L</span>
+<span class="font-data-mono text-data-mono text-secondary-fixed">+2.42%</span>
+</div>
+<div class="bg-secondary-fixed/5 border border-secondary-fixed/20 rounded px-3 py-2 flex flex-col">
+<span class="font-label-sm text-label-sm text-outline">Unrealized P&amp;L</span>
+<span class="font-data-mono text-data-mono text-secondary-fixed">+0.85%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Performance Metrics Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Total Return</span>
+<span class="font-data-mono text-data-mono text-white text-lg">+142.5%</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">CAGR</span>
+<span class="font-data-mono text-data-mono text-white text-lg">28.4%</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Sharpe Ratio</span>
+<span class="font-data-mono text-data-mono text-white text-lg">2.15</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Max Drawdown</span>
+<span class="font-data-mono text-data-mono text-error text-lg">-12.3%</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Profit Factor</span>
+<span class="font-data-mono text-data-mono text-white text-lg">1.85</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Win Rate</span>
+<span class="font-data-mono text-data-mono text-white text-lg">58.2%</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Total Trades</span>
+<span class="font-data-mono text-data-mono text-white text-lg">1,402</span>
+</div>
+<div class="glass-panel rounded-lg p-4 flex flex-col justify-between h-24">
+<span class="font-label-sm text-label-sm text-outline">Trade Expectancy</span>
+<span class="font-data-mono text-data-mono text-white text-lg">$425.10</span>
+</div>
+</div>
+<!-- Portfolio Equity Curve -->
+<div class="glass-panel rounded-xl p-md flex flex-col min-h-[300px]">
+<h3 class="font-headline-md text-headline-md text-white mb-4">Portfolio Equity Curve</h3>
+<div class="flex-1 relative border-l border-b border-white/10 flex items-end">
+<!-- Simulated Chart -->
+<div class="absolute w-full h-full p-4 pointer-events-none">
+<div class="w-full h-full bg-gradient-to-t from-primary-container/20 to-transparent relative overflow-hidden">
+<svg class="w-full h-full stroke-primary-fixed fill-none" preserveaspectratio="none" stroke-width="0.5" viewbox="0 0 100 50">
+<path d="M0 50 Q 10 40, 20 45 T 40 30 T 60 35 T 80 15 T 100 5"></path>
+</svg>
+<!-- Drawdown overlay abstraction -->
+<div class="absolute top-1/4 left-1/4 w-1/4 h-1/2 bg-error/10 border-t border-error/30"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar Column (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-gutter">
+<!-- Live Execution Feed -->
+<div class="glass-panel rounded-xl flex flex-col h-80">
+<div class="p-4 border-b border-white/10 flex justify-between items-center bg-surface-container-low/50 rounded-t-xl">
+<h3 class="font-headline-md text-lg text-white">Live Execution Feed</h3>
+<span class="w-2 h-2 rounded-full bg-secondary-fixed animate-pulse"></span>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-2">
+<!-- Trade Row 1 -->
+<div class="p-3 border border-white/5 rounded bg-white/5 flex flex-col gap-1 text-sm">
+<div class="flex justify-between font-data-mono">
+<span class="text-outline">14:22</span>
+<span class="text-white font-bold">ETH-USD</span>
+<span class="text-secondary-fixed">LONG</span>
+</div>
+<div class="flex justify-between font-data-mono text-xs">
+<span class="text-outline">Entry: 2,420.10</span>
+<span class="text-outline">Exit: --</span>
+<span class="text-secondary-fixed">P&amp;L: +1.2%</span>
+</div>
+</div>
+<!-- Trade Row 2 -->
+<div class="p-3 border border-white/5 rounded flex flex-col gap-1 text-sm">
+<div class="flex justify-between font-data-mono">
+<span class="text-outline">14:15</span>
+<span class="text-white font-bold">BTC-USD</span>
+<span class="text-error">SHORT</span>
+</div>
+<div class="flex justify-between font-data-mono text-xs">
+<span class="text-outline">Entry: 64,100</span>
+<span class="text-outline">Exit: 63,900</span>
+<span class="text-secondary-fixed">P&amp;L: +0.8%</span>
+</div>
+</div>
+<!-- Trade Row 3 -->
+<div class="p-3 border border-white/5 rounded flex flex-col gap-1 text-sm opacity-70">
+<div class="flex justify-between font-data-mono">
+<span class="text-outline">13:50</span>
+<span class="text-white font-bold">SOL-USD</span>
+<span class="text-secondary-fixed">LONG</span>
+</div>
+<div class="flex justify-between font-data-mono text-xs">
+<span class="text-outline">Entry: 142.50</span>
+<span class="text-outline">Exit: 141.00</span>
+<span class="text-error">P&amp;L: -1.0%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Intelligence Panel -->
+<div class="glass-panel rounded-xl p-md flex flex-col gap-4">
+<h3 class="font-headline-md text-lg text-white border-b border-white/10 pb-2">Intelligence Panel</h3>
+<div class="flex justify-around items-center py-2">
+<div class="flex flex-col items-center gap-1">
+<span class="font-data-mono text-2xl text-secondary-fixed">88%</span>
+<span class="font-label-sm text-outline text-center">Signal<br/>Confidence</span>
+</div>
+<div class="w-px h-12 bg-white/10"></div>
+<div class="flex flex-col items-center gap-1">
+<span class="font-data-mono text-2xl text-white">34%</span>
+<span class="font-label-sm text-outline text-center">Risk<br/>Utilization</span>
+</div>
+</div>
+<p class="font-body-md text-sm text-outline bg-white/5 p-3 rounded border border-white/5">
+                        Momentum regime stable. Volatility contained. Allocation increased within risk tolerance.
+                    </p>
+</div>
+<!-- Risk Panel -->
+<div class="glass-panel rounded-xl p-md flex flex-col gap-4">
+<h3 class="font-headline-md text-lg text-white border-b border-white/10 pb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">shield</span> Risk Panel
+                    </h3>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between font-label-sm">
+<span class="text-outline">Daily Risk Cap</span>
+<span class="text-white">45%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed w-[45%]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-2">
+<div class="bg-surface-container-high/30 p-2 rounded border border-secondary-fixed/20 flex flex-col items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed animate-pulse"></span>
+<span class="font-label-sm text-[10px] text-outline text-center uppercase">Stop-Loss Triggers</span>
+<span class="font-data-mono text-xs text-white">ACTIVE</span>
+</div>
+<div class="bg-surface-container-high/30 p-2 rounded border border-white/5 flex flex-col items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+<span class="font-label-sm text-[10px] text-outline text-center uppercase">Safeguard Interventions</span>
+<span class="font-data-mono text-xs text-outline">STANDBY</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
