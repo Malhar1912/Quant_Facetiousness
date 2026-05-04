@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-const API = 'http://localhost:8000/api/trading';
+const API = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/trading`;
 
 export function useRealtime() {
   const [status, setStatus] = useState(null);
