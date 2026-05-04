@@ -7,12 +7,29 @@ import ExecutionFeed from './components/dashboard/ExecutionFeed';
 import IntelPanel from './components/dashboard/IntelPanel';
 import RiskPanel from './components/dashboard/RiskPanel';
 import LoadingOverlay from './components/common/LoadingOverlay';
+import BacktestControls from './components/controls/BacktestControls';
+import RealtimeControls from './components/controls/RealtimeControls';
 import { useBacktest } from './hooks/useBacktest';
+import { useRealtime } from './hooks/useRealtime';
 
 export default function App() {
   const { data, loading, error, progress, runBacktest, loadLatest } = useBacktest();
+  const { status, loading: rtLoading, error: rtError, start30Days, stop30Days, getStatus } = useRealtime();
 
-  useEffect(() => { loadLatest(); }, [loadLatest]);
+  useEffect(() => { 
+    loadLatest(); 
+    const interval = setInterval(loadLatest, 60000); // Poll for latest backtest run
+    return () => clearInterval(interval);
+  }, [loadLatest]);
+
+  // Poll 30-day agent status if running
+  useEffect(() => {
+    if (!status?.running) return;
+    
+    const interval = setInterval(getStatus, 30000); // Poll every 30 seconds
+    getStatus(); // Initial check
+    return () => clearInterval(interval);
+  }, [status?.running, getStatus]);
 
   // Aggregate metrics: prefer portfolio-level, fallback to first ticker
   const portfolio = data?.portfolio || {};
@@ -103,6 +120,16 @@ export default function App() {
 
           {/* Right Column (4 cols) */}
           <div className="lg:col-span-4 flex flex-col gap-5">
+            <RealtimeControls 
+              onStart={start30Days}
+              onStop={stop30Days}
+              status={status}
+              loading={rtLoading}
+            />
+            <BacktestControls 
+              onRun={runBacktest}
+              loading={loading}
+            />
             <ExecutionFeed tickerResults={tickerResults} />
             <IntelPanel tickerResults={tickerResults} />
             <RiskPanel portfolio={portfolio} />
