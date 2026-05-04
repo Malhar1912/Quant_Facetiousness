@@ -49,12 +49,6 @@ trading_engine: Optional[RealtimeTradingEngine] = None
 engine_task: Optional[asyncio.Task] = None
 engine_lock = threading.Lock()
 
-# 30-day continuous agent state
-continuous_agent_task: Optional[asyncio.Task] = None
-continuous_agent_running: bool = False
-continuous_agent_session_id: Optional[int] = None
-continuous_agent_lock = threading.Lock()
-
 # ─── Database ───────────────────────────────────────────────
 
 def get_conn():
@@ -103,6 +97,18 @@ def init_db():
             timestamp TIMESTAMP DEFAULT NOW()
         )
     """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS agent_config (
+            id SERIAL PRIMARY KEY,
+            session_id INT REFERENCES realtime_sessions(id),
+            is_active BOOLEAN DEFAULT FALSE,
+            tickers TEXT,
+            initial_capital NUMERIC(15,2),
+            interval_seconds INT DEFAULT 3600,
+            last_run_at TIMESTAMP
+        )
+    """)
     
     conn.commit()
     cur.close()
@@ -117,75 +123,7 @@ async def run_trading_engine(tickers: List[str], initial_capital: float, interva
     
     await trading_engine.run(interval_seconds=interval_seconds)
 
-async def run_continuous_agent(tickers: List[str], initial_capital: float, duration_days: int = 30):
-    """Run continuous trading agent for specified days."""
-    global continuous_agent_running, continuous_agent_session_id
-    
-    print(f"\n{'='*60}")
-    print(f"Starting 30-Day Continuous Trading Agent")
-    print(f"Tickers: {', '.join(tickers)}")
-    print(f"Initial Capital: ${initial_capital:,.2f}")
-    print(f"Duration: {duration_days} days")
-    print(f"{'='*60}\n")
-    
-    engine = RealtimeTradingEngine(DB_URL, tickers, initial_capital)
-    continuous_agent_session_id = engine.start_session()
-    continuous_agent_running = True
-    
-    try:
-        # Run for 30 days with 1-hour intervals
-        # 30 days * 24 hours = 720 hours
-        cycles = 30 * 24
-        interval_seconds = 3600  # 1 hour
-        
-        start_time = datetime.now()
-        
-        for cycle in range(cycles):
-            if not continuous_agent_running:
-                print("Continuous agent stopped by user")
-                break
-            
-            elapsed = datetime.now() - start_time
-            days_elapsed = elapsed.total_seconds() / (24 * 3600)
-            
-            print(f"\n[Day {days_elapsed:.1f}/{duration_days}] Continuous Agent Cycle {cycle + 1}/{cycles}")
-            
-            try:
-                # Fetch data
-                data = engine.fetch_live_data()
-                
-                # Generate signals
-                signals = engine.generate_signals(data)
-                
-                # Execute trades
-                engine.execute_trades(signals)
-                
-                # Save snapshot
-                engine.save_snapshot()
-                
-                # Print status
-                metrics = engine.portfolio.get_metrics()
-                print(f"✓ Portfolio Equity: ${metrics['equity']:,.2f} | "
-                      f"Return: {metrics['return_pct']:.2f}% | "
-                      f"Trades: {metrics['total_trades']} | "
-                      f"Positions: {len(engine.portfolio.get_all_positions())}")
-                
-            except Exception as e:
-                print(f"✗ Error in trading cycle: {e}")
-            
-            # Wait before next cycle (1 hour)
-            print(f"Sleeping for {interval_seconds}s until next cycle...")
-            await asyncio.sleep(interval_seconds)
-        
-        print(f"\n✓ 30-Day continuous agent completed successfully")
-        
-    except Exception as e:
-        print(f"✗ Error in continuous agent: {e}")
-    
-    finally:
-        continuous_agent_running = False
-        engine.end_session()
-        print(f"Session {continuous_agent_session_id} closed")
+    await trading_engine.run(interval_seconds=interval_seconds)
 
 @app.on_event("startup")
 async def startup_event():
@@ -413,120 +351,142 @@ def get_sessions_history(limit: int = 20):
 
 @app.post("/api/trading/start-30days")
 async def start_30day_trading(req: StartTradingRequest):
-    """Start 30-day continuous trading agent (runs in background)."""
-    global continuous_agent_task, continuous_agent_running
+    """Start 30-day continuous trading agent by updating agent_config."""
+    conn = get_conn()
+    cur = conn.cursor()
     
-    with continuous_agent_lock:
-        if continuous_agent_running:
+    try:
+        # Check if already active
+        cur.execute("SELECT id FROM agent_config WHERE is_active = TRUE")
+        if cur.fetchone():
             raise HTTPException(status_code=400, detail="30-day agent already running")
         
-        # Create background task
-        continuous_agent_task = asyncio.create_task(
-            run_continuous_agent(req.tickers, req.initial_capital, duration_days=30)
+        # Create new session
+        tickers_str = ",".join(req.tickers)
+        cur.execute(
+            "INSERT INTO realtime_sessions (tickers, status, capital) VALUES (%s, %s, %s) RETURNING id",
+            (tickers_str, "active_agent", req.initial_capital)
         )
+        session_id = cur.fetchone()["id"]
         
+        # Update/Insert agent_config
+        cur.execute("SELECT id FROM agent_config LIMIT 1")
+        config = cur.fetchone()
+        
+        if config:
+            cur.execute(
+                "UPDATE agent_config SET session_id=%s, is_active=TRUE, tickers=%s, "
+                "initial_capital=%s, interval_seconds=%s, last_run_at=NULL WHERE id=%s",
+                (session_id, tickers_str, req.initial_capital, req.interval_seconds, config["id"])
+            )
+        else:
+            cur.execute(
+                "INSERT INTO agent_config (session_id, is_active, tickers, initial_capital, interval_seconds) "
+                "VALUES (%s, TRUE, %s, %s, %s)",
+                (session_id, tickers_str, req.initial_capital, req.interval_seconds)
+            )
+        
+        conn.commit()
         return {
             "status": "started",
-            "mode": "30-day-continuous",
-            "tickers": req.tickers,
-            "initial_capital": req.initial_capital,
-            "duration_days": 30,
-            "message": "Trading will continue for 30 days even if browser closes"
+            "session_id": session_id,
+            "message": "Persistent agent initialized. worker.py will begin cycles shortly."
         }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
 
 @app.post("/api/trading/stop-30days")
 def stop_30day_trading():
     """Stop 30-day continuous trading agent."""
-    global continuous_agent_running, continuous_agent_session_id
-    
-    with continuous_agent_lock:
-        if not continuous_agent_running:
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT session_id FROM agent_config WHERE is_active = TRUE")
+        row = cur.fetchone()
+        if not row:
             raise HTTPException(status_code=400, detail="30-day agent not running")
         
-        continuous_agent_running = False
-        session_id = continuous_agent_session_id
+        session_id = row["session_id"]
+        cur.execute("UPDATE agent_config SET is_active = FALSE")
+        cur.execute("UPDATE realtime_sessions SET status = 'closed' WHERE id = %s", (session_id,))
         
-        return {
-            "status": "stopped",
-            "session_id": session_id,
-            "message": "30-day agent has been stopped"
-        }
+        conn.commit()
+        return {"status": "stopped", "session_id": session_id}
+    finally:
+        cur.close()
+        conn.close()
 
 @app.get("/api/trading/30days-status")
 def get_30day_status():
-    """Get status of 30-day continuous agent."""
-    with continuous_agent_lock:
-        if not continuous_agent_running or not continuous_agent_session_id:
-            return {
-                "running": False,
-                "session_id": None,
-                "message": "No 30-day agent currently running"
-            }
+    """Get status of 30-day continuous agent from DB."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM agent_config LIMIT 1")
+        config = cur.fetchone()
         
-        # Get session details from database
-        conn = get_conn()
-        cur = conn.cursor()
+        if not config or not config["is_active"]:
+            return {"running": False, "message": "No active agent configuration"}
         
-        cur.execute("SELECT * FROM realtime_sessions WHERE id=%s", (continuous_agent_session_id,))
+        session_id = config["session_id"]
+        
+        # Get session details
+        cur.execute("SELECT * FROM realtime_sessions WHERE id=%s", (session_id,))
         session = cur.fetchone()
         
         # Get latest snapshot
         cur.execute(
             "SELECT * FROM realtime_snapshots WHERE session_id=%s ORDER BY timestamp DESC LIMIT 1",
-            (continuous_agent_session_id,)
+            (session_id,)
         )
-        latest_snapshot = cur.fetchone()
-        
-        cur.close()
-        conn.close()
+        snapshot = cur.fetchone()
         
         if not session:
-            return {
-                "running": continuous_agent_running,
-                "session_id": continuous_agent_session_id,
-                "error": "Session not found"
-            }
-        
-        session_dict = dict(session)
-        snapshot = dict(latest_snapshot) if latest_snapshot else {}
-        
+            return {"running": True, "session_id": session_id, "error": "Session missing"}
+
         return {
-            "running": continuous_agent_running,
-            "session_id": continuous_agent_session_id,
-            "tickers": session_dict.get("tickers", "").split(","),
-            "status": session_dict.get("status", "active"),
-            "created_at": session_dict.get("created_at", "").isoformat() if session_dict.get("created_at") else None,
-            "equity": snapshot.get("equity", 0),
-            "cash": snapshot.get("cash", 0),
-            "positions_count": len(snapshot.get("positions", {})) if snapshot.get("positions") else 0,
-            "metrics": snapshot.get("metrics", {}),
-            "last_update": snapshot.get("timestamp", "").isoformat() if snapshot.get("timestamp") else None
+            "running": config["is_active"],
+            "session_id": session_id,
+            "tickers": config["tickers"].split(","),
+            "status": session["status"],
+            "created_at": session["created_at"].isoformat() if session["created_at"] else None,
+            "equity": snapshot["equity"] if snapshot else 0,
+            "cash": snapshot["cash"] if snapshot else 0,
+            "positions_count": len(snapshot["positions"]) if snapshot and snapshot["positions"] else 0,
+            "metrics": snapshot["metrics"] if snapshot else {},
+            "last_update": snapshot["timestamp"].isoformat() if snapshot and snapshot["timestamp"] else None,
+            "last_run_at": config["last_run_at"].isoformat() if config["last_run_at"] else None
         }
+    finally:
+        cur.close()
+        conn.close()
 
 @app.get("/api/trading/30days-log")
 def get_30day_log(limit: int = 50):
     """Get recent trades from 30-day agent."""
-    with continuous_agent_lock:
-        if not continuous_agent_session_id:
-            return {
-                "trades": [],
-                "count": 0,
-                "message": "No 30-day session available"
-            }
-        
-        conn = get_conn()
-        cur = conn.cursor()
-        
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT session_id FROM agent_config WHERE is_active = TRUE")
+        row = cur.fetchone()
+        if not row:
+            return {"trades": [], "count": 0, "message": "No active session"}
+            
+        session_id = row["session_id"]
         cur.execute(
             "SELECT * FROM realtime_trades WHERE session_id=%s ORDER BY timestamp DESC LIMIT %s",
-            (continuous_agent_session_id, limit)
+            (session_id, limit)
         )
         trades = cur.fetchall()
-        cur.close()
-        conn.close()
-        
         return {
             "trades": [dict(t) for t in trades],
             "count": len(trades),
-            "session_id": continuous_agent_session_id
+            "session_id": session_id
         }
+    finally:
+        cur.close()
+        conn.close()

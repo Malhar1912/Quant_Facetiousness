@@ -38,6 +38,25 @@ class RealtimePortfolio:
         self.last_update = datetime.now()
         self._lock = threading.Lock()
         
+    def load_from_snapshot(self, snapshot: dict):
+        """Restore portfolio state from a database snapshot."""
+        with self._lock:
+            self.cash = float(snapshot.get("cash", self.initial_capital))
+            self.positions = {}
+            
+            positions_data = snapshot.get("positions", {})
+            for ticker, pos in positions_data.items():
+                self.positions[ticker] = {
+                    "shares": float(pos["shares"]),
+                    "entry_price": float(pos["entry_price"]),
+                    "entry_date": datetime.fromisoformat(pos["entry_date"]),
+                    "current_price": float(pos["current_price"]),
+                    "signal_confidence": float(pos.get("signal_confidence", 0.5)),
+                    "status": "open"
+                }
+            
+            self.last_update = datetime.now()
+        
     def get_equity(self) -> float:
         """Calculate current portfolio equity."""
         with self._lock:
@@ -235,6 +254,39 @@ class RealtimeTradingEngine:
         conn.close()
         
         return self.session_id
+    
+    def load_session(self, session_id: int):
+        """Load an existing trading session from the database."""
+        self.session_id = session_id
+        
+        try:
+            conn = psycopg.connect(self.db_url, row_factory=dict_row)
+            cur = conn.cursor()
+            
+            # Get session info
+            cur.execute("SELECT * FROM realtime_sessions WHERE id=%s", (session_id,))
+            session = cur.fetchone()
+            if not session:
+                raise ValueError(f"Session {session_id} not found")
+            
+            self.tickers = session["tickers"].split(",")
+            self.portfolio.initial_capital = float(session["capital"])
+            
+            # Get latest snapshot
+            cur.execute(
+                "SELECT * FROM realtime_snapshots WHERE session_id=%s ORDER BY timestamp DESC LIMIT 1",
+                (session_id,)
+            )
+            snapshot = cur.fetchone()
+            if snapshot:
+                self.portfolio.load_from_snapshot(snapshot)
+            
+            cur.close()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error loading session {session_id}: {e}")
+            return False
     
     def end_session(self):
         """End the trading session."""
@@ -478,6 +530,31 @@ class RealtimeTradingEngine:
         finally:
             self.running = False
             self.end_session()
+    
+    def run_single_cycle(self):
+        """Execute one complete trading cycle (fetch -> signals -> trades -> snapshot)."""
+        if not self.session_id:
+            raise ValueError("No session ID loaded")
+            
+        try:
+            print(f"[{datetime.now()}] Fetching live data...")
+            data = self.fetch_live_data()
+            
+            print(f"[{datetime.now()}] Generating signals...")
+            signals = self.generate_signals(data)
+            
+            print(f"[{datetime.now()}] Executing trades...")
+            self.execute_trades(signals)
+            
+            print(f"[{datetime.now()}] Saving snapshot...")
+            self.save_snapshot()
+            
+            metrics = self.portfolio.get_metrics()
+            print(f"✓ Cycle complete: Equity ${metrics['equity']:.2f} | Return {metrics['return_pct']:.2f}%")
+            return metrics
+        except Exception as e:
+            print(f"✗ Error in trading cycle: {e}")
+            raise e
     
     def stop(self):
         """Stop the trading engine."""
